@@ -1,376 +1,304 @@
-<html lang="en">
+import React, { useState } from 'react';
 
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>
-        Live Football Match
-    </title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-        }
+const MAX_HISTORY = 20;
 
-        .header {
-            background-color: #4a148c;
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+const styles = {
+  container: {
+    maxWidth: 600,
+    margin: '20px auto',
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    padding: '10px 20px',
+    border: '1px solid #ccc',
+    borderRadius: 8,
+    background: '#fafafa',
+    boxShadow: '0 2px 8px rgb(0 0 0 / 0.1)',
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#2c3e50',
+  },
+  points: {
+    fontSize: 18,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  betSection: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  input: {
+    width: 150,
+    padding: 7,
+    fontSize: 16,
+  },
+  betChoices: {
+    display: 'flex',
+    gap: 10,
+  },
+  betButton: (selected) => ({
+    padding: '10px 20px',
+    cursor: 'pointer',
+    fontWeight: 600,
+    borderRadius: 5,
+    border: '1.5px solid #2980b9',
+    backgroundColor: selected ? '#2980b9' : 'white',
+    color: selected ? 'white' : '#2980b9',
+    transition: '0.3s',
+  }),
+  playBtn: {
+    padding: '10px 30px',
+    backgroundColor: '#27ae60',
+    color: 'white',
+    fontWeight: 700,
+    border: 'none',
+    borderRadius: 5,
+    cursor: 'pointer',
+    transition: '0.3s',
+  },
+  playBtnHover: {
+    backgroundColor: '#219150',
+  },
+  resultSection: {
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  diceContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 15,
+    margin: '10px 0',
+  },
+  dice: (num) => {
+    const colors = {
+      1: '#e74c3c',
+      2: '#e67e22',
+      3: '#f1c40f',
+      4: '#2ecc71',
+      5: '#3498db',
+      6: '#9b59b6',
+    };
+    return {
+      width: 50,
+      height: 50,
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: 'white',
+      lineHeight: '50px',
+      textAlign: 'center',
+      borderRadius: 6,
+      boxShadow: '0 0 5px #333',
+      userSelect: 'none',
+      backgroundColor: colors[num] || '#333',
+    };
+  },
+  message: {
+    textAlign: 'center',
+    fontWeight: 600,
+    marginBottom: 15,
+    color: '#c0392b',
+    minHeight: 24,
+  },
+  historySection: {
+    marginTop: 20,
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    textAlign: 'center',
+  },
+  th: {
+    border: '1px solid #ddd',
+    padding: 8,
+    backgroundColor: '#2980b9',
+    color: 'white',
+  },
+  td: {
+    border: '1px solid #ddd',
+    padding: 8,
+  },
+  winRow: {
+    backgroundColor: '#d4efdf',
+    color: '#27ae60',
+  },
+  loseRow: {
+    backgroundColor: '#f9d6d5',
+    color: '#c0392b',
+  },
+  trendSection: {
+    marginTop: 25,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#34495e',
+  },
+};
 
-        .header img {
-            height: 40px;
-        }
+const GameTaiXiu = () => {
+  const [playerPoints, setPlayerPoints] = useState(1000);
+  const [betAmount, setBetAmount] = useState(0);
+  const [betChoice, setBetChoice] = useState(null);
+  const [result, setResult] = useState(null);
+  const [sum, setSum] = useState(null);
+  const [outcome, setOutcome] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [message, setMessage] = useState('');
 
-        .header nav a {
-            color: white;
-            margin: 0 10px;
-            text-decoration: none;
-        }
+  const rollDice = () => {
+    return [1, 2, 3].map(() => Math.floor(Math.random() * 6) + 1);
+  };
 
-        .main {
-            display: flex;
-        }
+  const handlePlay = () => {
+    if (betAmount <= 0) {
+      setMessage('Vui lòng nhập số tiền cược hợp lệ!');
+      return;
+    }
+    if (!betChoice) {
+      setMessage('Vui lòng chọn Tài hoặc Xỉu!');
+      return;
+    }
+    if (betAmount > playerPoints) {
+      setMessage('Bạn không đủ điểm để cược!');
+      return;
+    }
 
-        .sidebar {
-            width: 200px;
-            background-color: #2c2f33;
-            color: white;
-            padding: 20px;
-        }
+    setMessage('');
+    const dices = rollDice();
+    const total = dices.reduce((a, b) => a + b, 0);
+    let resOutcome = null;
 
-        .sidebar a {
-            color: white;
-            text-decoration: none;
-            display: block;
-            margin: 10px 0;
-        }
+    if (dices[0] === dices[1] && dices[1] === dices[2]) {
+      // Bộ ba
+      resOutcome = 'Bộ ba';
+    } else if (total >= 11 && total <= 17) {
+      resOutcome = 'Tài';
+    } else if (total >= 4 && total <= 10) {
+      resOutcome = 'Xỉu';
+    }
 
-        .content {
-            flex: 1;
-            padding: 20px;
-        }
+    setResult(dices);
+    setSum(total);
+    setOutcome(resOutcome);
 
-        .content .video {
-            background-color: black;
-            width: 100%;
-            height: 500px;
-            margin-bottom: 20px;
-        }
+    if (resOutcome === 'Bộ ba') {
+      setPlayerPoints(prev => prev - betAmount);
+      setMessage('Bộ ba xuất hiện! Bạn thua cược!');
+      addHistory({ dices, total, outcome: 'Bộ ba', playerWin: false, betChoice, betAmount });
+    } else if (resOutcome === betChoice) {
+      setPlayerPoints(prev => prev + betAmount);
+      setMessage('Chúc mừng! Bạn thắng cược!');
+      addHistory({ dices, total, outcome: resOutcome, playerWin: true, betChoice, betAmount });
+    } else {
+      setPlayerPoints(prev => prev - betAmount);
+      setMessage('Rất tiếc! Bạn thua cược!');
+      addHistory({ dices, total, outcome: resOutcome, playerWin: false, betChoice, betAmount });
+    }
 
-        .content .video img {
-            width: 100%;
-            height: 100%;
-        }
+    setBetAmount(0);
+    setBetChoice(null);
+  };
 
-        .content .scoreboard {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #e0e0e0;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
+  const addHistory = (entry) => {
+    setHistory(prev => {
+      const newHist = [entry, ...prev];
+      if (newHist.length > MAX_HISTORY) newHist.pop();
+      return newHist;
+    });
+  };
 
-        .content .scoreboard div {
-            text-align: center;
-        }
+  const countTrend = () => {
+    const taiCount = history.filter(h => h.outcome === 'Tài').length;
+    const xiuCount = history.filter(h => h.outcome === 'Xỉu').length;
+    return { taiCount, xiuCount };
+  };
 
-        .content .scoreboard img {
-            height: 50px;
-        }
+  const { taiCount, xiuCount } = countTrend();
 
-        .content .tabs {
-            display: flex;
-            justify-content: space-around;
-            background-color: #e0e0e0;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Game Tài Xỉu</h1>
+      <div style={styles.points}>
+        Điểm hiện tại: <b>{playerPoints}</b>
+      </div>
 
-        .content .tabs div {
-            cursor: pointer;
-        }
-
-        .content .tabs .active {
-            border-bottom: 2px solid #4a148c;
-        }
-
-        .content .stats {
-            display: flex;
-            justify-content: space-around;
-            background-color: #e0e0e0;
-            padding: 20px;
-            border-radius: 5px;
-        }
-
-        .content .stats div {
-            text-align: center;
-        }
-
-        .content .stats div p {
-            margin: 5px 0;
-        }
-
-        .chat {
-            width: 300px;
-            background-color: white;
-            border-left: 1px solid #e0e0e0;
-            padding: 20px;
-        }
-
-        .chat .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .chat .header img {
-            height: 40px;
-        }
-
-        .chat .messages {
-            height: 400px;
-            overflow-y: scroll;
-            margin-bottom: 20px;
-        }
-
-        .chat .messages div {
-            margin-bottom: 10px;
-        }
-
-        .chat .messages .system {
-            color: orange;
-        }
-
-        .chat .messages .user {
-            color: green;
-        }
-
-        .chat .input {
-            display: flex;
-            align-items: center;
-        }
-
-        .chat .input input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-        }
-
-        .chat .input button {
-            background-color: #4a148c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin-left: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="header">
-        <img alt="Logo" height="40"
-            src="https://storage.googleapis.com/a1aa/image/owfIOfou6vqCukT9LEXgCVTT9vuynGp2eB3B1ZseP6EggZAQB.jpg"
-            width="100" />
-        <nav>
-            <a href="#">
-                Trang chủ
-            </a>
-            <a href="#">
-                Live
-            </a>
-            <a href="#">
-                Lịch thi đấu
-            </a>
-            <a href="#">
-                Tin tức
-            </a>
-        </nav>
-        <div>
-            <input placeholder="Tìm kiếm" type="text" />
-            <button>
-                Tải xuống
-            </button>
-            <button>
-                leomessi
-            </button>
+      <div style={styles.betSection}>
+        <input
+          type="number"
+          placeholder="Nhập số tiền cược"
+          value={betAmount}
+          min="0"
+          style={styles.input}
+          onChange={e => setBetAmount(Number(e.target.value))}
+        />
+        <div style={styles.betChoices}>
+          <button
+            style={styles.betButton(betChoice === 'Tài')}
+            onClick={() => setBetChoice('Tài')}
+          >
+            Tài
+          </button>
+          <button
+            style={styles.betButton(betChoice === 'Xỉu')}
+            onClick={() => setBetChoice('Xỉu')}
+          >
+            Xỉu
+          </button>
         </div>
-    </div>
-    <div class="main">
-        <div class="sidebar">
-            <a href="#">
-                Gợi ý
-            </a>
-            <a href="#">
-                Bóng đá
-            </a>
-            <a href="#">
-                Bóng rổ
-            </a>
-            <a href="#">
-                Esports
-            </a>
-            <a href="#">
-                Khác
-            </a>
-        </div>
-        <div class="content">
-            <div class="video">
-                <img alt="Live football match" height="500"
-                    src="https://storage.googleapis.com/a1aa/image/x7f75H4N3KzuVyCtv9neGhfk9WYM2jk7c2jgepPfDABsAzAgC.jpg"
-                    width="800" />
-            </div>
-            <div class="scoreboard">
-                <div>
-                    <img alt="Thailand flag" height="50"
-                        src="https://storage.googleapis.com/a1aa/image/DxjC2rs6AabXLJEbv07jppzsqHA8mewscErQKAZcOE7BMDAKA.jpg"
-                        width="50" />
-                    <p>
-                        Thái Lan
-                    </p>
-                </div>
-                <div>
-                    <h1>
-                        2 - 1
-                    </h1>
-                    <p>
-                        Giải bóng đá Đông Nam Á
-                    </p>
-                    <p>
-                        12/10/2020 Đang live
-                    </p>
-                </div>
-                <div>
-                    <img alt="Philippines flag" height="50"
-                        src="https://storage.googleapis.com/a1aa/image/snsUPn5XmcIed6BYAu5K1ep5o6SireXleweCGkwUkPi7AzAgC.jpg"
-                        width="50" />
-                    <p>
-                        Philippines
-                    </p>
-                </div>
-            </div>
-            <div class="tabs">
-                <div class="active">
-                    Tình hình
-                </div>
-                <div>
-                    Dự kiến
-                </div>
-                <div>
-                    Thêm
-                </div>
-                <div>
-                    Cuộc trực tiếp
-                </div>
-            </div>
-            <div class="stats">
-                <div>
-                    <p>
-                        Tấn công
-                    </p>
-                    <p>
-                        87
-                    </p>
-                </div>
-                <div>
-                    <p>
-                        Tấn công nguy hiểm
-                    </p>
-                    <p>
-                        37
-                    </p>
-                </div>
-                <div>
-                    <p>
-                        Chiếm hữu
-                    </p>
-                    <p>
-                        49
-                    </p>
-                </div>
-            </div>
-        </div>
-        <div class="chat">
-            <div class="header">
-                <img alt="User avatar" height="40"
-                    src="https://storage.googleapis.com/a1aa/image/GhocqqOfudxDfUVc7uQPxbyHhPBV4CQYvVEEkof5y8FDwMAoA.jpg"
-                    width="40" />
-                <div>
-                    <p>
-                        BLV_ENZO
-                    </p>
-                    <p>
-                        131
-                    </p>
-                </div>
-            </div>
-            <div class="messages">
-                <div class="system">
-                    Chào mừng bạn đến với phòng trực tiếp [BLV_ENZO]...
-                </div>
-                <div class="user">
-                    Seven: a thấy chưa a nói từ đầu rồi
-                </div>
-                <div class="user">
-                    haidseo: hay quá
-                </div>
-                <div class="user">
-                    leomessi: nghĩ kèo pen làm này
-                </div>
-                <div class="user">
-                    Seven: này thì cứ bài vớn
-                </div>
-                <div class="user">
-                    Seven: có hiệp phụ k
-                </div>
-                <div class="user">
-                    leomessi: 2-2 r
-                </div>
-                <div class="user">
-                    Seven: xin 1 góc nữaaaa
-                </div>
-                <div class="system">
-                    Chào mừng Lockocuibap tham gia phòng live
-                </div>
-                <div class="system">
-                    Chào mừng khách4426 tham gia phòng live
-                </div>
-                <div class="user">
-                    Seven: Phi đăng cấp thật cả giải chưa thua trận nào
-                </div>
-                <div class="user">
-                    Seven: tháng indo tháng thái suyết thần g vn
-                </div>
-                <div class="system">
-                    Chào mừng Heha tham gia phòng live
-                </div>
-                <div class="system">
-                    Chào mừng khách5477 tham gia phòng live
-                </div>
-                <div class="user">
-                    Seven: a hay đọc nhầm đấu huyền
-                </div>
-            </div>
-            <div class="input">
-                <input placeholder="Nhập tin nhắn..." type="text" />
-                <button>
-                    Gửi
-                </button>
-            </div>
-        </div>
-    </div>
-</body>
+        <button style={styles.playBtn} onClick={handlePlay}>
+          Chơi
+        </button>
+      </div>
 
-</html>
+      {result && (
+        <div style={styles.resultSection}>
+          <h2>Kết quả:</h2>
+          <div style={styles.diceContainer}>
+            {result.map((d, i) => (
+              <div key={i} style={styles.dice(d)}>
+                {d}
+              </div>
+            ))}
+          </div>
+          <p>Tổng: {sum}</p>
+          <p>
+            Kết quả: <b>{outcome}</b>
+          </p>
+        </div>
+      )}
+
+      <div style={styles.message}>{message}</div>
+
+      <div style={styles.historySection}>
+        <h3>Lịch sử cược (mới nhất trước)</h3>
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>#</th>
+              <th style={styles.th}>Xúc xắc</th>
+              <th style={styles.th}>Tổng</th>
+              <th style={styles.th}>Kết quả</th>
+              <th style={styles.th}>Cược</th>
+              <th style={styles.th}>Tiền cược</th>
+              <th style={styles.th}>Thắng/Thua</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.length === 0 && (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: 10 }}>
+                  Chưa có cược nào
+                </td>
+              </tr>
+            )}
+            {history.map((h, i) => (
+              <tr
+                key={i}
+                style={h.playerWin ? styles.winRow : styles.loseRow}
+              >
+                <td style={styles.td}>{i + 1}</td>
+                <
